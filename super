@@ -1,0 +1,1741 @@
+
+if getgenv().KeyMode ~= nil then while true do end end
+
+local KeyGuardLibrary = loadstring(game:HttpGet("https://cdn.keyguardian.org/library/v1.0.0.lua"))()
+local trueData = "a8fd6f575fd34688bf4cff621f4fef2b"
+local falseData = "62b9a707b1b64cac848537de0ec6c2f7"
+
+KeyGuardLibrary.Set({
+  publicToken = "f669a730e810454c89821fcaa1987c64",
+  privateToken = "b988371992b7417593183f2f1e51349b",
+  trueData = trueData,
+  falseData = falseData,
+})
+
+local getkey = KeyGuardLibrary.getLink()
+
+
+local response = KeyGuardLibrary.validatePremiumKey(getgenv().key)
+
+
+
+           
+if response == trueData then
+-- Services
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
+local AssetService = game:GetService("AssetService")
+local plr = game:GetService('Players').LocalPlayer
+local id = plr.UserId
+local r_storage = game:GetService("ReplicatedStorage")
+local profiles = r_storage.network.Profiles
+local p_prof = profiles:FindFirstChild(tostring(id))
+local lfolder = p_prof.level
+local sfolder = p_prof.stats
+
+
+
+
+-- Variables
+local player = Players.LocalPlayer
+local camera = workspace.CurrentCamera
+local balls = {}
+
+local targetColor = BrickColor.new(Color3.fromRGB(237, 234, 234))
+
+local aimbotEnabled = false
+local ballTarget = nil
+local connection
+local isToggled = false
+local home = Vector3.new(-1.6493651866912842, 0.7610451579093933, -352.9581604003906)
+local away = Vector3.new(-1.9949278831481934, 0.7224336862564087, 355.56939697265625)
+local ball = nil
+local selectedBodyPart = nil
+local reachEnabled = false
+local reachSize = 20
+local selectionBox = nil
+local originalSize = nil
+local originalCanCollide = nil
+local keyConfig = AssetService.game.config.Key
+local key = keyConfig:GetAttribute("realKey")
+
+
+
+
+-- Load Fluent UI Library
+getgenv().Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+getgenv().SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+getgenv().InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- Create Fluent Window
+getgenv().Window = Fluent:CreateWindow({
+    Title = "RF24 | Hydra",
+    SubTitle = "Paid",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false, 
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightShift
+})
+
+local Main = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }), 
+}
+
+local Misc = {
+    Main = Window:AddTab({ Title = "Misc", Icon = "settings-2" }), 
+}
+
+local Game = {
+    Main = Window:AddTab({ Title = "Game", Icon = "gamepad" }), 
+}
+
+local Character = {
+    Main = Window:AddTab({ Title = "Character", Icon = "user" }), 
+}
+
+local Teams = {
+    Main = Window:AddTab({ Title = "Teams", Icon = "users" }), 
+}
+
+local Troll = {
+    Main = Window:AddTab({ Title = "Troll", Icon = "laugh" }), 
+}
+
+local OP = {
+    Main = Window:AddTab({ Title = "OP", Icon = "sword" }), 
+}
+
+local Extra = {
+    Main = Window:AddTab({ Title = "Extra", Icon = "layers" }), 
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" }) 
+}
+
+
+-- Fluent Options
+local Options = Fluent.Options
+
+-- Functions
+function reduceLag()
+    local decalsyeeted = true
+    local g = game
+    local w = g.Workspace
+    local l = g.Lighting
+    local t = w.Terrain
+    t.WaterWaveSize = 0
+    t.WaterWaveSpeed = 0
+    t.WaterReflectance = 0
+    t.WaterTransparency = 0
+    l.GlobalShadows = false
+    l.FogEnd = 9e9
+    l.Brightness = 0
+    settings().Rendering.QualityLevel = "Level01"
+    for i, v in pairs(g:GetDescendants()) do
+        if v:IsA("Part") or v:IsA("Union") or v:IsA("CornerWedgePart") or v:IsA("TrussPart") then
+            v.Material = "Plastic"
+            v.Reflectance = 0
+        elseif v:IsA("Decal") or v:IsA("Texture") and decalsyeeted then
+            v.Transparency = 1
+        elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+            v.Lifetime = NumberRange.new(0)
+        elseif v:IsA("Explosion") then
+            v.BlastPressure = 1
+            v.BlastRadius = 1
+        elseif v:IsA("Fire") or v:IsA("SpotLight") or v:IsA("Smoke") then
+            v.Enabled = false
+        elseif v:IsA("MeshPart") then
+            v.Material = "Plastic"
+            v.Reflectance = 0
+            v.TextureID = 10385902758728957
+        end
+    end
+    for i, e in pairs(l:GetChildren()) do
+        if e:IsA("BlurEffect") or e:IsA("SunRaysEffect") or e:IsA("ColorCorrectionEffect") or e:IsA("BloomEffect") or e:IsA("DepthOfFieldEffect") then
+            e.Enabled = false
+        end
+    end
+end
+
+function getBall()
+    local matchingParts = {}
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local partName = part.Name:lower()
+            if partName == "system" or partName == "rf" or partName == "referee" or 
+               partName == "replication" or partName == "holder" or partName == "manager" then
+                if part:FindFirstChildOfClass("TouchTransmitter") then
+                    table.insert(matchingParts, part)
+                end
+            end
+        end
+    end
+    return matchingParts[1]
+end
+
+function setTransparencyForColor(color, transparency)
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") and part.BrickColor == color then
+            part.Transparency = transparency
+        end
+    end
+end
+
+function catch()
+    local playerPosition = player.Character.HumanoidRootPart.Position
+    local ball = getBall()
+    if ball then
+        local args = {
+            [1] = 1000,
+            [2] = "catch",
+            [3] = {
+                ["cframe"] = CFrame.new(playerPosition),
+                ["ball"] = ball
+            }
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                pcall(function()
+                    func:InvokeServer(unpack(args))
+                end)
+            end
+        end
+        ball:Destroy()
+    else
+        print("Ball not found.")
+    end
+end
+
+function drop()
+    local matchingParts = {}
+    for _, part in ipairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            local partName = part.Name:lower()
+            if partName == "system" or partName == "rf" or partName == "referee" or
+               partName == "replication" or partName == "holder" or partName == "manager" then
+                if part:FindFirstChildOfClass("TouchTransmitter") then
+                    table.insert(matchingParts, part)
+                end
+            end
+        end
+    end
+    for _, part in ipairs(matchingParts) do
+        print("Handling part for drop action")
+        local args = {
+            [1] = 1000,
+            [2] = "drop",
+            [3] = {
+                ["ball"] = part
+            }
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteEvent") then
+                pcall(function()
+                    func:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+end
+
+local function catch1()
+    local function getBall()
+        local ball = nil
+        local distance = math.huge
+        for _, part in ipairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == true and part.Transparency == 1 and part.BrickColor == targetColor then
+                local partPosition = part.Position
+                local currentDistance = (partPosition - player.Character.HumanoidRootPart.Position).magnitude
+                if currentDistance < distance then
+                    ball = part
+                    distance = currentDistance
+                end
+            end
+        end
+        return ball
+    end
+    local playerPosition = player.Character.HumanoidRootPart.Position
+    local args = {
+        [1] = 1000,
+        [2] = "catch",
+        [3] = {
+            ["cframe"] = CFrame.new(playerPosition),
+            ["ball"] = getBall()
+        }
+    }
+    while not args[3]["ball"] do
+        wait(1)
+        args[3]["ball"] = getBall()
+    end
+    local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+    local remoteFunctions = sharedModule:GetChildren()
+    for _, func in ipairs(remoteFunctions) do
+        if func:IsA("RemoteFunction") then
+            local success, error = pcall(function()
+                func:InvokeServer(unpack(args))
+            end)
+            if success then
+                print("success")
+            else
+                warn("Failed: ", error)
+            end
+        end
+    end
+end
+
+local function movePlayer(character, destination)
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.WalkSpeed = 30
+    local tweenInfo = TweenInfo.new(20, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+    while isToggled do
+        local playerPosition = character.HumanoidRootPart.Position
+        local distance = (playerPosition - destination).Magnitude
+        if distance >= 5 then
+            local tween = TweenService:Create(character.HumanoidRootPart, tweenInfo, {CFrame = CFrame.new(destination)})
+            tween:Play()
+            tween.Completed:Connect(function()
+                if (character.HumanoidRootPart.Position - destination).Magnitude < 5 then
+                    catch1()
+                end
+            end)
+            tween.Completed:Wait()
+        else
+            wait(1)
+        end
+    end
+end
+
+local function stopScript()
+    return
+end
+
+local function getBall1()
+    if not ball then
+        local targetColor = BrickColor.new(Color3.fromRGB(237, 234, 234))
+        local distance = math.huge
+        for _, part in ipairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == true and part.Transparency == 1 and part.BrickColor == targetColor then
+                local partPosition = part.Position
+                local player = game:GetService("Players").LocalPlayer
+                local currentDistance = (partPosition - player.Character.HumanoidRootPart.Position).magnitude
+                if currentDistance < distance then
+                    ball = part
+                    distance = currentDistance
+                end
+            end
+        end
+    end
+    if ball and ball.Parent then
+        return ball
+    else
+        ball = nil
+        return nil
+    end
+end
+
+local function aimAtBall()
+    if ballTarget then
+        camera.CFrame = CFrame.new(camera.CFrame.Position, ballTarget.Position)
+    end
+end
+
+local function updateAimbot()
+    if aimbotEnabled then
+        if not connection then
+            connection = game:GetService("RunService").RenderStepped:Connect(aimAtBall)
+        end
+    else
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+    end
+end
+
+local function rejoin()
+    local Rejoin = coroutine.create(function()
+        local Success, ErrorMessage = pcall(function()
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
+        if ErrorMessage and not Success then
+            warn(ErrorMessage)
+        end
+    end)
+    coroutine.resume(Rejoin)
+end
+
+local function updateSelectionBox()
+    if selectionBox then selectionBox:Destroy() end
+    if selectedBodyPart then
+        selectionBox = Instance.new("SelectionBox")
+        selectionBox.Adornee = selectedBodyPart
+        selectionBox.Color3 = Color3.fromRGB(255, 0, 0)
+        selectionBox.Transparency = transparencyEnabled and 1 or 0.5
+        selectionBox.Parent = selectedBodyPart
+    end
+end
+
+local function enforceReachState()
+    if reachEnabled and selectedBodyPart then
+        selectedBodyPart.Massless = true
+        selectedBodyPart.CanCollide = false
+        selectedBodyPart.Size = Vector3.new(reachSize, reachSize, reachSize)
+    end
+end
+
+local function reachLoop()
+    while reachLoopActive do
+        wait()
+        local character = game.Players.LocalPlayer.Character
+        local torso = character and character:FindFirstChild("Torso") or nil
+        if torso then
+            torso.CanCollide = false
+        end
+    end
+end
+
+local function toggleReach(enabled)
+    reachEnabled = enabled
+    if selectedBodyPart then
+        if enabled then
+            if not originalSize then
+                originalSize = selectedBodyPart.Size
+            end
+            enforceReachState()
+            updateSelectionBox()
+            reachLoopActive = true
+            spawn(reachLoop)
+        else
+            if originalSize then
+                selectedBodyPart.Massless = false
+                selectedBodyPart.CanCollide = false
+                selectedBodyPart.Size = originalSize
+                originalSize = nil
+            end
+            if selectionBox then selectionBox:Destroy() end
+            reachLoopActive = false
+        end
+    end
+end
+
+local function handleReach()
+    local player = game:GetService("Players").LocalPlayer
+    local ball = getBall1()
+    if ball then
+        local char = player.Character
+        local humanoidRootPart = char:FindFirstChild("HumanoidRootPart")
+        if humanoidRootPart then
+            local magnitudeNum = tonumber(magnitude)
+            if magnitudeNum then
+                if (humanoidRootPart.Position - ball.Position).Magnitude <= magnitudeNum then
+                    for _, bodyPart in ipairs(selectedBodyParts) do
+                        local part = char:FindFirstChild(bodyPart)
+                        if part then
+                            firetouchinterest(part, ball, 0)
+                            firetouchinterest(part, ball, 1)
+                        else
+                            print("Body part not found: " .. bodyPart)
+                        end
+                    end
+                end
+            else
+                print("Error: Magnitude is not a valid number.")
+            end
+        else
+            print("Error: HumanoidRootPart not found.")
+        end
+    end
+end
+
+Main.Main:AddToggle("AutoFarm", {
+    Title = "Auto Farm (BETA)",
+    Default = false
+}):OnChanged(function()
+    isToggled = Options.AutoFarm.Value
+    if isToggled then
+        local destination
+        if player.Team then
+            local teamName = player.Team.Name
+            if teamName == "Away" or teamName == "Away GK" then
+                destination = home
+            elseif teamName == "Home" or teamName == "Home GK" then
+                destination = away
+            end
+        end
+        if destination then
+            movePlayer(player.Character, destination)
+        else
+            warn("Goal not found.")
+        end
+    else
+        stopScript()
+    end
+end)
+
+local BodyPartDropdown = Main.Main:AddDropdown("BodyPartDropdown", {
+    Title = "Select Body Part",
+    Values = {"LeftFoot", "RightFoot", "RightHand", "LeftHand", "Torso", "UpperTorso", "Head"},
+    Multi = true,
+    Default = {"RightFoot"}
+})
+
+BodyPartDropdown:SetValue({
+    LeftFoot = true,
+    RightFoot = false,
+    Torso = true,
+})
+
+local MagnitudeSlider = Main.Main:AddSlider("MagnitudeSlider", {
+    Title = "Magnitude",
+    Description = "Adjust the reach magnitude",
+    Default = 0,
+    Min = 0,
+    Max = 9.8,
+    Rounding = 1,
+})
+
+local ReachToggle = Main.Main:AddToggle("ReachToggle", {
+    Title = "Reach #1",
+    Default = false
+}):OnChanged(function(arg)
+    if arg then
+        RunStepped2 = game:GetService("RunService").RenderStepped:Connect(handleReach)
+    else
+        if RunStepped2 then
+            RunStepped2:Disconnect()
+        end
+    end
+end)
+
+BodyPartDropdown:OnChanged(function(Value)
+    selectedBodyParts = {}
+    for part, state in next, Value do
+        if state then
+            table.insert(selectedBodyParts, part)
+        end
+    end
+    print("Selected body parts updated to:", table.concat(selectedBodyParts, ", "))
+end)
+
+MagnitudeSlider:OnChanged(function(Value)
+    magnitude = tonumber(Value)
+    if magnitude then
+        print("Magnitude changed:", magnitude)
+    else
+        print("Error: Slider value is not a valid number.")
+    end
+end)
+
+
+local sizeforX, sizeforY, sizeforZ = 7.5, 7.5, 7.5
+local sizeenable = false
+local transparencyEnabled = false
+
+local player = game:GetService("Players").LocalPlayer
+
+-- Toggles for Reach and Transparency
+local ToggleReach3 = Main.Main:AddToggle("ReachToggle3", {
+    Title = "Reach #2",
+    Default = false
+}):OnChanged(function(newValue)
+    sizeenable = newValue
+end)
+
+local SliderReachX = Main.Main:AddSlider("SizeSliderX", {
+    Title = "Size X",
+    Description = "Adjust X size",
+    Default = 7.5,
+    Min = 0,
+    Max = 9.8,
+    Rounding = 1,
+    Callback = function(Value)
+        sizeforX = Value
+    end
+})
+
+local SliderReachY = Main.Main:AddSlider("SizeSliderY", {
+    Title = "Size Y",
+    Description = "Adjust Y size",
+    Default = 7.5,
+    Min = 0,
+    Max = 9.8,
+    Rounding = 1,
+    Callback = function(Value)
+        sizeforY = Value
+    end
+})
+
+local SliderReachZ = Main.Main:AddSlider("SizeSliderZ", {
+    Title = "Size Z",
+    Description = "Adjust Z size",
+    Default = 7.5,
+    Min = 0,
+    Max = 9.8,
+    Rounding = 1,
+    Callback = function(Value)
+        sizeforZ = Value
+    end
+})
+
+local ToggleTransparency = Main.Main:AddToggle("TransparencyToggle", {
+    Title = "Transparency",
+    Default = false
+}):OnChanged(function(newValue)
+    transparencyEnabled = newValue
+end)
+
+-- Function to handle applying settings to the "Collide" part
+local function applySettingsToCollidePart(character)
+    -- Wait for the "Collide" part to appear in the character
+    local originalCol = character:WaitForChild("Collide")
+    local originalSize = originalCol.Size
+
+    -- Fetch the metatable
+    local mt = getrawmetatable(game)
+    local oldIndex = mt.__index
+    setreadonly(mt, false)
+
+    -- Override __index to modify the "Size" property of the "Collide" part
+    mt.__index = function(self, key)
+        if self == originalCol and key == "Size" then
+            return originalSize
+        end
+        return oldIndex(self, key)
+    end
+
+    -- Ensure size and transparency settings are applied continuously
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if originalCol and originalCol.Parent then
+            if sizeenable then
+                originalCol.Size = Vector3.new(sizeforX, sizeforY, sizeforZ)
+            else
+                originalCol.Size = originalSize
+            end
+
+            -- Handle transparency based on toggle
+            originalCol.Transparency = transparencyEnabled and 0.5 or 1
+            originalCol.CanCollide = false
+            originalCol.Massless = true
+        end
+    end)
+
+    -- Revert metatable to read-only after modification
+    setreadonly(mt, true)
+end
+
+-- Initial call to apply settings to the character's current "Collide" part
+applySettingsToCollidePart(player.Character or player.CharacterAdded:Wait())
+
+-- Reapply settings when the character respawns
+player.CharacterAdded:Connect(function(character)
+    -- Re-apply the settings to the new character's "Collide" part
+    applySettingsToCollidePart(character)
+end)
+
+
+
+
+
+-- Misc Tab
+
+
+Misc.Main:AddToggle("BallAimbotToggle", {Title = "Ball Aimbot", Default = false}):OnChanged(function(value)
+    aimbotEnabled = value
+    if aimbotEnabled then
+        ballTarget = getBall1()
+        updateAimbot()
+    else
+        updateAimbot() 
+        camera.CameraType = Enum.CameraType.Custom
+    end
+end)
+
+local Players = game:GetService("Players")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+
+local connection
+
+local function checkSizeAndTrigger(path)
+    local size = path.Size
+    if size.X < 4 and size.Z < 4 then
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
+        wait(0.1)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Space, false, game)
+        return true
+    end
+    return false
+end
+
+local Toggle = Misc.Main:AddToggle("AutoPen", {Title = "Auto Pen", Default = false })
+
+Toggle:OnChanged(function()
+    if Toggle.Value then
+        -- Check if the path exists and connect to RenderStepped
+        local path = game:GetService("Workspace").game.debug:FindFirstChild(player.Name)
+        if path then
+            path = path:FindFirstChild("Overlay") and path.Overlay:FindFirstChild("Composure")
+        end
+
+        if path then
+            connection = RunService.RenderStepped:Connect(function()
+                if checkSizeAndTrigger(path) then
+                    connection:Disconnect() -- Stop the script after the trigger
+                end
+            end)
+        else
+            print("Composure part not found!")
+        end
+    else
+        -- Disconnect the connection if the toggle is turned off
+        if connection then
+            connection:Disconnect()
+            connection = nil -- Clear the connection variable
+        end
+    end
+end)
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Plr = Players.LocalPlayer
+local Mouse = Plr:GetMouse()
+local isScriptEnabled = false
+
+local function destroyObjects()
+    local objectsToDestroy = {
+        workspace:FindFirstChild("game") and workspace.game:FindFirstChild("regions") and workspace.game.regions:FindFirstChild("field"),
+        workspace:FindFirstChild("game") and workspace.game:FindFirstChild("regions") and workspace.game.regions:FindFirstChild("storeEnd"),
+    }
+    
+    for _, object in pairs(objectsToDestroy) do
+        if object then
+            object:Destroy()
+        end
+    end
+end
+
+local function handleToggle(value)
+    isScriptEnabled = value
+end
+
+local function onMouseClick()
+    if not isScriptEnabled then return end
+    if not Mouse.Target then return end
+    
+    local pole = workspace.pitch.flags:FindFirstChildOfClass("Model"):FindFirstChild("Pole")
+    
+    if pole then
+        pole.CFrame = CFrame.new(Mouse.Hit.p)
+        wait(0.3)
+        
+        for _, v in pairs(ReplicatedStorage.network.Shared:GetChildren()) do
+            if v:IsA("RemoteEvent") then
+                v:FireServer(1000, "partTeleport", pole)
+            end
+        end
+    end
+end
+
+Mouse.Button1Down:Connect(onMouseClick)
+
+local Toggle = Misc.Main:AddToggle("MyToggle", {Title = "Click to teleport [Bypass]", Default = false})
+
+Toggle:OnChanged(function(value)
+    handleToggle(value)
+end)
+
+destroyObjects()
+
+Misc.Main:AddToggle("BypassVKV2", {Title = "Bypass VK (lvl 25+) | V2", Default = false }):OnChanged(function(toggled)
+    while toggled do
+        coroutine.wrap(function()
+            while toggled do
+                local playerList = Players:GetPlayers()
+                table.remove(playerList, table.find(playerList, localPlayer))
+                if #playerList > 0 then
+                    local randomPlayer = playerList[math.random(#playerList)]
+                    game:GetService('Players'):Chat(":votekick " .. randomPlayer.Name)
+                end
+                wait(30) 
+            end
+        end)()
+        coroutine.wrap(function()
+            while toggled do
+                local playerList = Players:GetPlayers()
+                table.remove(playerList, table.find(playerList, localPlayer))
+                if #playerList > 0 then
+                    local randomPlayer = playerList[math.random(#playerList)]
+                    game:GetService('Players'):Chat(":votekick " .. randomPlayer.Name)
+                end
+                wait(600) 
+            end
+        end)()
+        break
+    end
+end)
+
+Misc.Main:AddToggle("BypassVKV1", {Title = "Bypass VK (rejoins) | V1", Default = false }):OnChanged(function(Value)
+    if Value then
+        player.OnKick:Connect(function()
+            print("Player was kicked. Attempting to rejoin...")
+            rejoin()
+        end)
+    end
+end)
+
+Misc.Main:AddToggle("DeleteBarriers", {Title = "Delete Invisible Barriers", Default = false }):OnChanged(function(Value)
+    if Value then
+        Connection = RunService.RenderStepped:Connect(function()
+            for i, player in pairs(game.Players:GetPlayers()) do
+                for i, child in pairs(game.Workspace.game.debug:GetChildren()) do
+                    if child:IsA("Model") and string.find(child.Name, player.Name) then
+                        child:Destroy()
+                    end
+                end
+            end
+        end)
+    else
+        if Connection then
+            Connection:Disconnect()
+        end
+    end
+end)
+
+Misc.Main:AddButton({
+    Title = "Bring Ball",
+    Description = "",
+    Callback = function()
+        catch()
+    end
+})
+
+Misc.Main:AddButton({
+    Title = "Drop Ball",
+    Description = "",
+    Callback = function()
+       drop()
+    end
+})
+
+-- Game Tab
+Game.Main:AddButton({
+    Title = "Reduce Lag",
+    Description = "Removes some textures (this action is not revertable)",
+    Callback = function()
+        reduceLag()
+    end
+})
+
+Game.Main:AddButton({
+    Title = "Remove Snow",
+    Description = "Removes Snow on Screen",
+    Callback = function()
+        game:GetService("Players").LocalPlayer.PlayerGui.main.overlay.snow:Destroy()
+    end
+})
+
+Game.Main:AddButton({
+    Title = "Remove Rain",
+    Description = "Removes Rain on Screen",
+    Callback = function()
+        game:GetService("Players").LocalPlayer.PlayerGui.main.overlay.rain:Destroy()
+    end
+})
+
+Game.Main:AddButton({
+    Title = "Remove Blur",
+    Description = "Removes Blurry Vision",
+    Callback = function()
+        game:GetService("Players").LocalPlayer.PlayerGui.main.overlay.vision:Destroy()
+    end
+})
+
+Character.Main:AddButton({
+    Title = "All Skins (FE)",
+    Description = "",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local playerId = tostring(player.UserId)
+        local bootsFolder = AssetService.game.boots
+        local targetBootsFolder = game:GetService("ReplicatedStorage").network.Profiles[playerId].inventory.Boots
+        for _, boot in ipairs(bootsFolder:GetChildren()) do
+            if not targetBootsFolder:FindFirstChild(boot.Name) then
+                local boolValue = Instance.new("BoolValue")
+                boolValue.Name = boot.Name
+                boolValue.Value = true
+                boolValue:SetAttribute("key", key)
+                local defaultValue = Instance.new("BoolValue")
+                defaultValue.Name = "DefaultValue"
+                defaultValue.Value = true
+                defaultValue.Parent = boolValue
+                boolValue.Parent = targetBootsFolder
+            end
+        end
+        local accessoriesFolder = AssetService.game.accessories
+        local targetAccessoriesFolder = game:GetService("ReplicatedStorage").network.Profiles[playerId].inventory.Accessories
+        for _, accessory in ipairs(accessoriesFolder:GetChildren()) do
+            if not targetAccessoriesFolder:FindFirstChild(accessory.Name) then
+                local boolValue = Instance.new("BoolValue")
+                boolValue.Name = accessory.Name
+                boolValue.Value = true
+                boolValue:SetAttribute("key", key)
+                local defaultValue = Instance.new("BoolValue")
+                defaultValue.Name = "DefaultValue"
+                defaultValue.Value = true
+                defaultValue.Parent = boolValue
+                boolValue.Parent = targetAccessoriesFolder
+            end
+        end
+    end
+})
+
+Character.Main:AddButton({
+    Title = "All Celebrations (FE)",
+    Description = "",
+    Callback = function()
+        local player = game.Players.LocalPlayer
+        local playerId = tostring(player.UserId)
+        local celebrationsFolder = AssetService.game.animations.Celebrations
+        local targetCelebrationsFolder = game:GetService("ReplicatedStorage").network.Profiles[playerId].inventory.Celebrations
+        for _, celebration in ipairs(celebrationsFolder:GetChildren()) do
+            if not targetCelebrationsFolder:FindFirstChild(celebration.Name) then
+                local boolValue = Instance.new("BoolValue")
+                boolValue.Name = celebration.Name
+                boolValue.Value = true
+                boolValue:SetAttribute("key", key)
+                local defaultValue = Instance.new("BoolValue")
+                defaultValue.Name = "DefaultValue"
+                defaultValue.Value = true
+                defaultValue.Parent = boolValue
+                boolValue.Parent = targetCelebrationsFolder
+            end
+        end
+    end
+})
+local infsenabled = false
+local infstaminaConnection -- Store the connection object
+
+local infstamina = Character.Main:AddToggle("infstamina", {Title = "Infinite Stamina", Default = false})
+
+infstamina:OnChanged(function(value)
+    infsenabled = value
+end)
+
+local function checkAndSetStamina()
+    if infsenabled then
+        local staminaValue = game.AssetService.controllers.movementController.stamina
+        if staminaValue.Value < 100 then
+            staminaValue.Value = 100
+        end
+    end
+end
+
+local function setupCharacter(character)
+    -- Disconnect any previous connection
+    if infstaminaConnection then 
+        infstaminaConnection:Disconnect() 
+    end
+
+    -- Create a new connection
+    infstaminaConnection = RunService.RenderStepped:Connect(checkAndSetStamina)
+end
+
+-- Initial setup (if the player's character already exists)
+local player = game.Players.LocalPlayer
+if player.Character then
+    setupCharacter(player.Character)
+end
+
+-- Connect to the CharacterAdded event to handle respawns
+player.CharacterAdded:Connect(setupCharacter) 
+
+Character.Main:AddButton({
+    Title = "Pitch Teleporter",
+    Description = "This is a gamepass feature this works by the game own function so you won't get detected",
+    Callback = function()
+       for _, v in pairs(game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared"):GetDescendants()) do
+    if v:IsA("RemoteEvent") then
+        v:FireServer(1000, "pitchTeleporter")
+    end
+end
+end
+})
+
+Character.Main:AddSlider("FOVSlider", {
+    Title = "FOV",
+    Description = "",
+    Default = 70,
+    Min = 0,
+    Max = 180,
+    Rounding = 1,
+    Callback = function(Value)
+        game.Workspace.CurrentCamera.FieldOfView = Value
+    end
+})
+
+Character.Main:AddDropdown("UniversalScripts", {
+    Title = "Universal Scripts",
+    Values = {"IY", "Fates Admin", "Secure Dex V3"},
+    Multi = false,
+    Default = nil,
+}):OnChanged(function(Value)
+    if Value == "IY" then
+        loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+    elseif Value == "Fates Admin" then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/fatesc/fates-admin/main/main.lua"))()
+    elseif Value == "Secure Dex V3" then
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/Babyhamsta/RBLX_Scripts/main/Universal/BypassedDarkDexV3.lua", true))()
+    end
+end)
+
+
+-- Teams Tab
+Teams.Main:AddButton({
+    Title = "Team Away",
+    Description = "Switch to Away Team",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "team",
+            [3] = game:GetService("Teams"):WaitForChild("Away")  
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                local success, response = pcall(function()
+                    return func:InvokeServer(unpack(args))
+                end)
+                if success then
+                    print("Response from " .. func.Name .. ":", response)
+                else
+                    warn("Failed to invoke " .. func.Name .. ": " .. tostring(response))
+                end
+            end
+        end
+    end
+})
+
+Teams.Main:AddButton({
+    Title = "Team Home",
+    Description = "Switch to Home Team",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "team",
+            [3] = game:GetService("Teams"):WaitForChild("Home")  
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                local success, response = pcall(function()
+                    return func:InvokeServer(unpack(args))
+                end)
+                if success then
+                    print("Response from " .. func.Name .. ":", response)
+                else
+                    warn("Failed to invoke " .. func.Name .. ": " .. tostring(response))
+                end
+            end
+        end
+    end
+})
+
+Teams.Main:AddButton({
+    Title = "Away GK",
+    Description = "Switch to Away Team GK",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "team",
+            [3] = game:GetService("Teams"):WaitForChild("Away GK") 
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                local success, response = pcall(function()
+                    return func:InvokeServer(unpack(args))
+                end)
+                if success then
+                    print("Response from " .. func.Name .. ":", response)
+                else
+                   warn("Failed to invoke " .. func.Name .. ": " .. tostring(response))
+                end
+            end
+        end
+    end
+})
+
+Teams.Main:AddButton({
+    Title = "Home GK",
+    Description = "Switch to Home Team GK",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "team",
+            [3] = game:GetService("Teams"):WaitForChild("Home GK")
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                local success, response = pcall(function()
+                    return func:InvokeServer(unpack(args))
+                end)
+                if success then
+                    print("Response from " .. func.Name .. ":", response)
+                else
+                    warn("Failed to invoke " .. func.Name .. ": " .. tostring(response))
+                end
+            end
+        end
+    end
+})
+
+-- Function to get animation names from a folder
+local function getAnimationNamesFromFolder(folder)
+    local animationNames = {}
+    if folder then
+        for _, animation in ipairs(folder:GetChildren()) do
+            if animation:IsA("Animation") then
+                table.insert(animationNames, animation.Name)
+            end
+        end
+    end
+    return animationNames
+end
+
+-- Function to play a selected animation
+local function playSelectedAnimation(folder, animationName)
+    local selectedAnimation = folder and folder:FindFirstChild(animationName)
+    if selectedAnimation then
+        local character = game.Players.LocalPlayer.Character
+        if character then
+            local humanoid = character:FindFirstChildOfClass("Humanoid")
+            if humanoid then
+                local animationTrack = humanoid:LoadAnimation(selectedAnimation)
+                animationTrack:Play()
+            end
+        end
+    end
+end
+
+
+local celebrationsFolder = AssetService:FindFirstChild("game") and AssetService.game:FindFirstChild("animations") and AssetService.game.animations:FindFirstChild("Celebrations")
+local refereeFolder = AssetService:FindFirstChild("game") and AssetService.game:FindFirstChild("animations") and AssetService.game.animations:FindFirstChild("Referee")
+
+local celebrationsNames = getAnimationNamesFromFolder(celebrationsFolder)
+local refereeNames = getAnimationNamesFromFolder(refereeFolder)
+
+
+
+
+
+
+local celebrationsDropdown = Troll.Main:AddDropdown("CelebrationsDropdown", {
+    Title = "Play Celebrations",
+    Values = celebrationsNames,
+    Multi = false,
+    Default = nil, 
+})
+
+local refereeDropdown = Troll.Main:AddDropdown("RefereeDropdown", {
+    Title = "Play Referee",
+    Values = refereeNames,
+    Multi = false,
+    Default = nil, 
+})
+
+
+celebrationsDropdown:OnChanged(function(value)
+    if value then
+        playSelectedAnimation(celebrationsFolder, value)
+    end
+end)
+
+refereeDropdown:OnChanged(function(value)
+    if value then
+        playSelectedAnimation(refereeFolder, value)
+    end
+end)
+
+
+
+Troll.Main:AddButton({
+    Title = "Get Up",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "getUpBinder",
+            [3] = true
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteEvents = sharedModule:GetChildren()
+        for _, event in ipairs(remoteEvents) do
+            if event:IsA("RemoteEvent") then
+                pcall(function()
+                    event:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+})
+
+Troll.Main:AddButton({
+    Title = "Stop Ragdoll",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "ragdoll",
+            [3] = "unbind"
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteFunctions = sharedModule:GetChildren()
+        for _, func in ipairs(remoteFunctions) do
+            if func:IsA("RemoteFunction") then
+                pcall(function()
+                    func:InvokeServer(unpack(args))
+                end)
+            end
+        end
+    end
+})
+
+Troll.Main:AddButton({
+    Title = "Ragdoll",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "ragdoll",
+            [3] = "bind"
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteEvents = sharedModule:GetChildren()
+        for _, event in ipairs(remoteEvents) do
+            if event:IsA("RemoteEvent") then
+                pcall(function()
+                    event:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+})
+
+Troll.Main:AddButton({
+    Title = "Wear GK Gloves",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "gloves",
+            [3] = 0
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteEvents = sharedModule:GetChildren()
+        for _, event in ipairs(remoteEvents) do
+            if event:IsA("RemoteEvent") then
+                pcall(function()
+                    event:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+})
+
+Troll.Main:AddButton({
+    Title = "Remove GK Gloves",
+    Callback = function()
+        local args = {
+            [1] = 1000,
+            [2] = "gloves",
+            [3] = 1
+        }
+        local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+        local remoteEvents = sharedModule:GetChildren()
+        for _, event in ipairs(remoteEvents) do
+            if event:IsA("RemoteEvent") then
+                pcall(function()
+                    event:FireServer(unpack(args))
+                end)
+            end
+        end
+    end
+})
+
+local ballInstance
+local isLagBallToggled = false
+local keybind = nil
+
+-- Lag Ball Toggle
+local Toggle = OP.Main:AddToggle("LagBallToggle", {Title = "Lag Ball", Default = false })
+Toggle:OnChanged(function()
+    isLagBallToggled = Toggle.Value
+end)
+
+-- Input for Keybind
+local Input = OP.Main:AddInput("Input", {
+    Title = "Keybind",
+    Default = "B",
+    Placeholder = "Enter keybind",
+    Numeric = false,
+    Finished = false,
+    Callback = function(Value)
+        keybind = Value:lower()
+    end
+})
+
+local function getBall()
+    if not ballInstance then
+        local targetColor = BrickColor.new(Color3.fromRGB(237, 234, 234))
+        local distance = math.huge
+        for _, part in ipairs(workspace:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide == true and part.Transparency == 1 and part.BrickColor == targetColor then
+                local partPosition = part.Position
+                local player = game:GetService("Players").LocalPlayer
+                local currentDistance = (partPosition - player.Character.HumanoidRootPart.Position).magnitude
+                if currentDistance < distance then
+                    ballInstance = part
+                    distance = currentDistance
+                end
+            end
+        end
+    end
+    if ballInstance and ballInstance.Parent then
+        return ballInstance
+    else
+        ballInstance = nil
+        return nil
+    end
+end
+
+local function toggleBallAnchor()
+    local ball = getBall()
+    if ball then
+        ball.Anchored = not ball.Anchored
+    end
+end
+
+game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if isLagBallToggled and keybind then -- Check if keybind is not nil
+        if input.KeyCode == Enum.KeyCode[string.upper(keybind)] then
+            toggleBallAnchor()
+        end
+    end
+end)
+
+-- Gravity Toggle
+local isGravityToggled = false
+local gravitySliderValue = 0.25 -- Default gravity value
+
+local GravityToggle = OP.Main:AddToggle("GravityToggle", {Title = "Ball Gravity", Default = false })
+GravityToggle:OnChanged(function()
+    isGravityToggled = GravityToggle.Value
+    local targetBall = getBall() -- Use getBall to find the ball
+    if targetBall then
+        local gravity = targetBall:FindFirstChild("Gravity") -- Look for the VectorForce named "Gravity"
+        if isGravityToggled and gravity then
+            gravity.Force = Vector3.new(0, gravitySliderValue * 1000, 0) -- Adjust gravity force
+        elseif gravity then
+            gravity.Force = Vector3.new(0, 250, 0) -- Reset to original gravity
+        end
+    end
+end)
+
+local GravitySlider = OP.Main:AddSlider("GravitySlider", {
+    Title = "Gravity Strength",
+    Description = "Adjust the ball's gravity strength",
+    Default = 0.25,
+    Min = 0,
+    Max = 2,
+    Rounding = 2, -- Set rounding to 2 decimal places for better precision
+    Callback = function(Value)
+        gravitySliderValue = Value
+        local targetBall = getBall() -- Use getBall to find the ball
+        if targetBall then
+            local gravity = targetBall:FindFirstChild("Gravity") -- Look for the VectorForce named "Gravity"
+            if gravity and isGravityToggled then
+                gravity.Force = Vector3.new(0, gravitySliderValue * 1000, 0) -- Update the gravity force
+            end
+        end
+    end
+})
+
+
+local antiGoalConnection
+
+local Toggle = OP.Main:AddToggle("AntiGoalToggle", {Title = "Anti Goal", Default = false})
+
+Toggle:OnChanged(function()
+    if Options.AntiGoalToggle.Value then
+        antiGoalConnection = game:GetService("RunService").Stepped:Connect(function()
+            local matchingParts = {}
+            for _, part in ipairs(workspace:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    local partName = part.Name:lower()
+                    if partName == "system" or partName == "rf" or partName == "referee" or 
+                       partName == "replication" or partName == "holder" or partName == "manager" then
+                        if part:FindFirstChildOfClass("TouchTransmitter") then
+                            table.insert(matchingParts, part)
+                        end
+                    end
+                end
+            end
+            for _, part in ipairs(matchingParts) do
+                print("Handling part for drop action")
+                local args = {
+                    [1] = 1000,
+                    [2] = "drop",
+                    [3] = {
+                        ["ball"] = part
+                    }
+                }
+                local sharedModule = game:GetService("ReplicatedStorage"):WaitForChild("network"):WaitForChild("Shared")
+                local remoteFunctions = sharedModule:GetChildren()
+                for _, func in ipairs(remoteFunctions) do
+                    if func:IsA("RemoteEvent") then
+                        pcall(function()
+                            func:FireServer(unpack(args))
+                        end)
+                    end
+                end
+            end
+        end)
+    else
+        if antiGoalConnection then
+            antiGoalConnection:Disconnect()
+            antiGoalConnection = nil
+        end
+    end
+end)
+
+
+
+-- Button to run the loadstring script
+OP.Main:AddButton({
+    Title = "Invisible",
+    Description = "X to Toggle it on and off | Say rtp before toggling it off",
+    Callback = function()
+        loadstring(game:HttpGet("https://paste.gg/p/anonymous/d3492bd620bd4c46b54680ac80b0fa0d/files/161ddd9c992c4ceba3c298458d45188a/raw", true))()
+    end
+})
+
+-- Ball Telekinesis Toggle
+local TelekinesisToggle = OP.Main:AddToggle("TelekinesisToggle", {Title = "Ball Telekinesis", Default = false })
+
+-- Utility function to set environment
+local function a(b, c)
+    local d = getfenv(c)
+    local e = setmetatable({}, {__index = function(self, f)
+        if f == "script" then
+            return b
+        else
+            return d[f]
+        end
+    end})
+    setfenv(c, e)
+    return c
+end
+
+local g = {}
+local m = sethiddenproperty or set_hidden_property
+local BP = Instance.new("BodyPosition")
+local point = Instance.new("Part")
+local dist = nil
+local object = nil
+local mousedown = false
+local objval = nil
+local isEnabled = false -- Track whether the script is enabled
+
+-- Setup BodyPosition
+BP.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+BP.P = BP.P * 1.1
+
+-- Setup point part
+point.Locked = true
+point.Anchored = true
+point.Size = Vector3.new(1, 1, 1)
+point.CanCollide = false
+
+-- Setup handle (replacing tool.Handle)
+local handle = Instance.new("Part")
+handle.Size = Vector3.new(1, 1, 1) 
+handle.Position = Vector3.new(0, 0, 0)
+handle.Anchored = true
+
+-- Function to create a line connection
+local function LineConnect(o, p, q)
+    local w = Instance.new("ObjectValue")
+    w.Value = o
+    w.Name = "Part1"
+    local x = Instance.new("ObjectValue")
+    x.Value = p
+    x.Name = "Part2"
+    local y = Instance.new("ObjectValue")
+    y.Value = q
+    y.Name = "Par"
+    local A = Instance.new("Script")
+    A.Disabled = false
+    w.Parent = A
+    x.Parent = A
+    y.Parent = A
+    A.Parent = workspace
+    if p == object then
+        objval = x
+    end
+end
+
+-- Function to handle mouse button down
+local function onButton1Down(B)
+    if not isEnabled or mousedown then return end
+    mousedown = true
+
+    coroutine.resume(coroutine.create(function()
+        local C = point:Clone()
+        C.Parent = workspace
+        LineConnect(handle, C, workspace)
+        while mousedown do
+            C.Parent = workspace
+            if object == nil then
+                if B.Target == nil then
+                    local t = CFrame.new(handle.Position, B.Hit.p)
+                    C.CFrame = CFrame.new(handle.Position + t.LookVector * 1000)
+                else
+                    C.CFrame = CFrame.new(B.Hit.p)
+                end
+            else
+                LineConnect(handle, object, workspace)
+                break
+            end
+            wait()
+        end
+        C:Destroy()
+    end))
+
+    while mousedown do
+        if B.Target then
+            local D = B.Target
+            if not D.Anchored then
+                object = D
+                dist = (object.Position - handle.Position).magnitude
+                break
+            end
+        end
+        wait()
+    end
+
+    while mousedown do
+        if object.Parent == nil then break end
+        local t = CFrame.new(handle.Position, B.Hit.p)
+        BP.Parent = object
+        BP.Position = handle.Position + t.LookVector * dist
+        wait()
+    end
+
+    BP:Destroy()
+    object = nil
+    if objval then
+        objval.Value = nil
+    end
+end
+
+-- Function to handle key presses
+local function onKeyDown(key)
+    if not isEnabled then return end
+    key = key:lower()
+    if key == "q" then
+        if dist >= 5 then
+            dist = dist - 10
+        end
+    elseif key == "e" then
+        dist = dist + 10
+    elseif key == "r" then
+        if object == nil then return end
+        local BG = Instance.new("BodyGyro")
+        BG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        BG.CFrame = CFrame.new(object.CFrame.p)
+        BG.Parent = object
+        repeat wait() until object.CFrame == CFrame.new(object.CFrame.p)
+        BG:Destroy()
+        object.Velocity = Vector3.new(0, 0, 0)
+        object.RotVelocity = Vector3.new(0, 0, 0)
+        object.Orientation = Vector3.new(0, 0, 0)
+    elseif key == "t" then
+        if object == nil then return end
+        local BG = Instance.new("BodyGyro")
+        BG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        BG.CFrame = object.CFrame
+        BG.Parent = object
+        local tiltAngle = math.rad(15) -- Adjust tilt angle as needed
+        local tiltCFrame = CFrame.Angles(tiltAngle, 0, 0)
+        object.CFrame = object.CFrame * tiltCFrame
+        BG:Destroy()
+    end
+end
+
+-- Function to handle mouse button up
+local function onButton1Up()
+    if object then
+        object = nil
+    end
+    mousedown = false
+end
+
+-- Telekinesis toggle handling
+TelekinesisToggle:OnChanged(function()
+    isEnabled = TelekinesisToggle.Value
+    if isEnabled then
+        game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed then
+                onKeyDown(input.KeyCode.Name)
+            end
+        end)
+
+        game:GetService("UserInputService").InputEnded:Connect(function(input, gameProcessed)
+            if not gameProcessed then
+                onButton1Up()
+            end
+        end)
+    end
+end)
+
+
+
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Level",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+        lfolder.Level.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "XP",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		lfolder.XP.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "XP Needed",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		lfolder.XPNeeded.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Point(Cash)",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.Cash.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Assist",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.Assist.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Goals",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.Goals.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "MOTM",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.MOTM.Value = Value
+    end
+})
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Wins",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.Wins.Value = Value
+    end
+})
+
+
+local Input = Extra.Main:AddInput("Input", {
+    Title = "Saves",
+    Default = "",
+    Placeholder = "",
+    Numeric = true,
+    Finished = false,
+    Callback = function(Value)
+		sfolder.Saves.Value = Value
+    end
+})
+
+
+
+-- Save & Load Settings
+getgenv().SaveManager:SetLibrary(Fluent)
+getgenv().InterfaceManager:SetLibrary(Fluent)
+
+getgenv().SaveManager:IgnoreThemeSettings()
+getgenv().SaveManager:SetIgnoreIndexes({})
+
+getgenv().InterfaceManager:SetFolder("FluentScriptHub")
+getgenv().SaveManager:SetFolder("FluentScriptHub/specific-game")
+
+getgenv().InterfaceManager:BuildInterfaceSection(Extra.Settings)
+getgenv().SaveManager:BuildConfigSection(Extra.Settings)
+
+getgenv().Window:SelectTab(1)
+getgenv().SaveManager:LoadAutoloadConfig()
+
+-- Initial Notification
+Fluent:Notify({
+    Title = "Hydra",
+    Content = "Auto Farm is in beta expect bugs.",
+    Duration = 8
+})
+
+
+else
+  print("Key is invalid")
+end
